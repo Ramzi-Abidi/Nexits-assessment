@@ -23,6 +23,7 @@ interface TasksTableProps {
 
 export function TasksTable({ tasksPromise, viewsPromise }: TasksTableProps) {
   const { data, pageCount } = React.use(tasksPromise);
+  console.log(data, pageCount);
   const views = React.use(viewsPromise);
 
   // Memoize the columns so they don't re-render on every render
