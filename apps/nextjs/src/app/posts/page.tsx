@@ -7,7 +7,7 @@ import { Shell } from "@acme/ui/shell";
 import type { SearchParams } from "~/types";
 import { DataTableSkeleton } from "~/components/data-table/data-table-skeleton";
 import { PostsTable } from "../_components/posts-table";
-import { getPosts, getViews } from "../_lib/queries";
+import { getViews } from "../_lib/queries";
 
 export interface IndexPageProps {
   searchParams: SearchParams;
@@ -17,7 +17,6 @@ export default function IndexPage({ searchParams }: IndexPageProps) {
   const search = searchParamsSchema.parse(searchParams);
 
   const viewsPromise = getViews();
-  const postsPromise = getPosts(search);
 
   return (
     <Shell className="gap-2">
@@ -45,7 +44,7 @@ export default function IndexPage({ searchParams }: IndexPageProps) {
          * Passing promises and consuming them using React.use for triggering the suspense fallback.
          * @see https://react.dev/reference/react/use
          */}
-        <PostsTable postsPromise={postsPromise} viewsPromise={viewsPromise} />
+        <PostsTable search={search} viewsPromise={viewsPromise} />
       </React.Suspense>
     </Shell>
   );
