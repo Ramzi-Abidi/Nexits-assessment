@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  integer,
   json,
   pgEnum,
   pgTable,
@@ -9,14 +10,34 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
+import { number, z } from "zod";
 
 //////////////////////// POSTS ////////////////////////
 
-export const Post = pgTable("post", {
+// export const Post = pgTable("post", {
+//   id: uuid("id").notNull().primaryKey().defaultRandom(),
+//   title: varchar("name", { length: 256 }).notNull(),
+//   content: text("content").notNull(),
+//   createdAt: timestamp("created_at").defaultNow().notNull(),
+//   updatedAt: timestamp("updatedAt", {
+//     mode: "date",
+//     withTimezone: true,
+//   }).$onUpdateFn(() => sql`now()`),
+// });
+
+export const postStatusEnum = pgEnum(`status`, [
+  "todo",
+  "in-progress",
+  "done",
+  "canceled",
+]);
+
+export const posts = pgTable("posts", {
   id: uuid("id").notNull().primaryKey().defaultRandom(),
   title: varchar("name", { length: 256 }).notNull(),
-  content: text("content").notNull(),
+  status: postStatusEnum("status").notNull().default("in-progress"),
+  author: text("author").notNull(),
+  nbComments: integer("nb_comments").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", {
     mode: "date",
@@ -24,20 +45,48 @@ export const Post = pgTable("post", {
   }).$onUpdateFn(() => sql`now()`),
 });
 
-export const CreatePostSchema = createInsertSchema(Post, {
+export type Post = typeof posts.$inferSelect;
+export type NewPost = typeof posts.$inferInsert;
+
+export const CreatePostSchema = createInsertSchema(posts, {
   title: z.string().max(256),
-  content: z.string().max(256),
+  status: z.string().max(256),
+  author: z.string().max(256),
+  nbComments: z.number().int(),
 }).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-export const User = pgTable("user", {
+export type CreatePostSchema = z.infer<typeof CreatePostSchema>;
+
+export const users = pgTable("users", {
   id: uuid("id").notNull().primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }),
   email: varchar("email", { length: 255 }).notNull(),
   image: varchar("image", { length: 255 }),
+});
+
+export const postsStatusEnum = z.enum(["in-progress", "published", "archived"]); // Replace with actual enum values
+
+export const updatePostSchema = z.object({
+  title: z.string().max(256),
+  status: z.enum(posts.status.enumValues),
+  author: z.string(),
+});
+
+export type UpdatePostSchema = z.infer<typeof updatePostSchema>;
+
+//////////////////////// COMMENTS ////////////////////////
+
+export const comments = pgTable("comments", {
+  id: uuid("id").notNull().primaryKey().defaultRandom(),
+  postId: uuid("post_id").notNull(),  // Reference to the post
+  authorId: uuid("author_id").notNull(),  // Reference to the user (author)
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 //////////////////////// TASKS ////////////////////////
@@ -105,6 +154,10 @@ export type SearchParams = z.infer<typeof searchParamsSchema>;
 export const getTasksSchema = searchParamsSchema;
 
 export type GetTasksSchema = z.infer<typeof getTasksSchema>;
+
+export const getPostsSchema = searchParamsSchema;
+
+export type GetPostsSchema = z.infer<typeof getPostsSchema>;
 
 export const createTaskSchema = z.object({
   title: z.string(),
