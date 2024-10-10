@@ -82,8 +82,8 @@ export type UpdatePostSchema = z.infer<typeof updatePostSchema>;
 
 export const comments = pgTable("comments", {
   id: uuid("id").notNull().primaryKey().defaultRandom(),
-  postId: uuid("post_id").notNull(),  // Reference to the post
-  authorId: uuid("author_id").notNull(),  // Reference to the user (author)
+  postId: uuid("post_id").notNull(), // Reference to the post
+  authorId: uuid("author_id").notNull(), // Reference to the user (author)
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
