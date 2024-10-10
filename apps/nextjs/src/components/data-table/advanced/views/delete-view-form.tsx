@@ -3,6 +3,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useFormState, useFormStatus } from "react-dom";
 import { toast } from "sonner";
 
+import { DeleteViewSchema } from "@acme/db/schema";
 import { Button } from "@acme/ui/button";
 import { LoaderIcon } from "@acme/ui/loader-icon";
 
@@ -21,7 +22,7 @@ export function DeleteViewForm({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [state, formAction] = useFormState(deleteView, {
+  const [state, formAction] = useFormState<any>(deleteView, {
     message: "",
   });
 
@@ -35,7 +36,6 @@ export function DeleteViewForm({
     } else if (state.status === "error") {
       toast.error(state.message);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, setIsEditViewFormOpen]);
 
   return (
