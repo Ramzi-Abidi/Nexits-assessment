@@ -4,9 +4,14 @@ import type { SQL } from "drizzle-orm";
 import { unstable_noStore as noStore } from "next/cache";
 import { and, asc, count, desc, gte, lte, or, sql } from "drizzle-orm";
 
-import type { GetTasksSchema, Task } from "@acme/db/schema";
+import type {
+  GetPostsSchema,
+  GetTasksSchema,
+  Post,
+  Task,
+} from "@acme/db/schema";
 import { db } from "@acme/db/client";
-import { tasks, views } from "@acme/db/schema";
+import { posts, tasks, views } from "@acme/db/schema";
 
 import type { DrizzleWhere } from "~/types";
 import { filterColumn } from "~/lib/filter-column";
@@ -145,4 +150,73 @@ export async function getViews() {
     })
     .from(views)
     .orderBy(desc(views.createdAt));
+}
+
+export async function getPosts({
+  page,
+  per_page,
+  sort,
+  title,
+  status,
+  from,
+  to,
+}: GetPostsSchema) {
+  try {
+    noStore();
+    const offset = (page - 1) * per_page;
+    const [column, order] = (sort?.split(".").filter(Boolean) ?? [
+      "createdAt",
+      "desc",
+    ]) as [keyof Post | undefined, "asc" | "desc" | undefined];
+
+    const fromDate = from ? sql`to_date(${from}, 'yyyy-mm-dd')` : undefined;
+    const toDate = to ? sql`to_date(${to}, 'yyyy-mm-dd')` : undefined;
+
+    // Build filter expressions
+    const filters = [
+      title ? sql`${posts.title} LIKE ${`%${title}%`}` : undefined,
+      status ? sql`${posts.status} = ${status}` : undefined,
+      fromDate && toDate
+        ? and(
+            sql`${posts.createdAt} >= ${fromDate}`,
+            sql`${posts.createdAt} <= ${toDate}`,
+          )
+        : undefined,
+    ].filter(Boolean);
+
+    const where = filters.length > 0 ? and(...filters) : undefined;
+    console.log(column);
+    // Fetch paginated posts data
+    const { data, total } = await db.transaction(async (tx) => {
+      const data = await tx
+        .select()
+        .from(posts)
+        .where(where)
+        .limit(per_page)
+        .offset(offset)
+        .orderBy(
+          column && column in posts
+            ? order === "asc"
+              ? asc(posts[column])
+              : desc(posts[column])
+            : desc(posts.id),
+        );
+
+      const total = await tx
+        .select({
+          count: count(),
+        })
+        .from(posts)
+        .where(where)
+        .execute()
+        .then((res) => res[0]?.count ?? 0);
+
+      return { data, total };
+    });
+
+    const pageCount = Math.ceil(total / per_page);
+    return { data, pageCount };
+  } catch {
+    return { data: [], pageCount: 0 };
+  }
 }

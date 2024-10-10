@@ -1,10 +1,15 @@
 import type { Task } from "./schema";
 import { db } from "./client";
-import { tasks } from "./schema";
-import { generateRandomTask } from "./util";
+import { comments, posts, tasks, users } from "./schema";
+import {
+  generateRandomComment,
+  generateRandomPost,
+  generateRandomTask,
+  generateRandomUser,
+} from "./util";
 
-async function seedTasks(input: { count: number | null }) {
-  const count = input.count ?? 100;
+async function seedTasks(input: { count: number }) {
+  const count = input.count;
   try {
     const allTasks: Omit<Task, "id">[] = [];
 
@@ -22,16 +27,57 @@ async function seedTasks(input: { count: number | null }) {
   }
 }
 
-function _seedPosts(_input: { count: number }) {
-  // TODO: Implement this function
+async function _seedPosts(_input: { count: number }) {
+  const count = _input.count; // Default to 100 if no count is provided
+  const allPosts = [];
+
+  try {
+    for (let i = 0; i < count; i++) {
+      allPosts.push(generateRandomPost());
+    }
+
+    console.log("📝 Inserting posts", allPosts.length);
+    await db.delete(posts);
+
+    await db.insert(posts).values(allPosts);
+  } catch (err) {
+    console.error(err);
+  }
 }
 
-function _seedUsers(_input: { count: number }) {
-  // TODO: Implement this function
+async function _seedUsers(_input: { count: number }) {
+  const count = _input.count; // Default to 100 if no count is provided
+  const allUsers = [];
+
+  try {
+    for (let i = 0; i < count; i++) {
+      allUsers.push(generateRandomUser());
+    }
+
+    console.log("📝 Inserting users", allUsers.length);
+    await db.delete(users);
+
+    await db.insert(users).values(allUsers);
+  } catch (err) {
+    console.error(err);
+  }
 }
 
-function _seedComments(_input: { count: number }) {
-  // TODO: Implement this function
+async function _seedComments(_input: { count: number }) {
+  const count = _input.count; // Default to 100 if no count is provided
+  const allComments = [];
+
+  try {
+    for (let i = 0; i < count; i++) {
+      allComments.push(generateRandomComment());
+    }
+    console.log("📝 Inserting comments", allComments.length);
+    await db.delete(comments);
+
+    await db.insert(comments).values(allComments);
+  } catch (err) {
+    console.error(err);
+  }
 }
 
 async function runSeed() {
@@ -39,7 +85,15 @@ async function runSeed() {
 
   const start = Date.now();
 
-  await seedTasks({ count: 100 });
+  const seedCount = 100;
+
+  // Run all seeds concurrently
+  await Promise.all([
+    seedTasks({ count: seedCount }),
+    _seedPosts({ count: seedCount }),
+    _seedUsers({ count: seedCount }),
+    _seedComments({ count: seedCount }),
+  ]);
 
   const end = Date.now();
 
