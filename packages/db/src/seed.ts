@@ -8,8 +8,8 @@ import {
   generateRandomUser,
 } from "./util";
 
-async function seedTasks(input: { count: number | null }) {
-  const count = input.count ?? 100;
+async function seedTasks(input: { count: number }) {
+  const count = input.count;
   try {
     const allTasks: Omit<Task, "id">[] = [];
 
@@ -27,8 +27,8 @@ async function seedTasks(input: { count: number | null }) {
   }
 }
 
-async function _seedPosts(_input: { count: number | null }) {
-  const count = _input.count ?? 100; // Default to 100 if no count is provided
+async function _seedPosts(_input: { count: number }) {
+  const count = _input.count; // Default to 100 if no count is provided
   const allPosts = [];
 
   try {
@@ -45,8 +45,8 @@ async function _seedPosts(_input: { count: number | null }) {
   }
 }
 
-async function _seedUsers(_input: { count: number | null }) {
-  const count = _input.count ?? 100; // Default to 100 if no count is provided
+async function _seedUsers(_input: { count: number }) {
+  const count = _input.count; // Default to 100 if no count is provided
   const allUsers = [];
 
   try {
@@ -64,7 +64,7 @@ async function _seedUsers(_input: { count: number | null }) {
 }
 
 async function _seedComments(_input: { count: number }) {
-  const count = _input.count ?? 100; // Default to 100 if no count is provided
+  const count = _input.count; // Default to 100 if no count is provided
   const allComments = [];
 
   try {

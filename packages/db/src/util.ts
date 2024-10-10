@@ -22,7 +22,7 @@ export function generateRandomPost(): Omit<Post, "id"> {
   return {
     title: faker.lorem.sentence(),
     status:
-      faker.helpers.shuffle(["todo", "in-progress", "done", "canceled"])[0] ||
+      faker.helpers.shuffle(["todo", "in-progress", "done", "canceled"])[0] ??
       "todo",
     author: faker.person.firstName(),
     nbComments: faker.number.int({ min: 0, max: 50 }),

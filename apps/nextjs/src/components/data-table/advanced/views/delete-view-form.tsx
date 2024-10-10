@@ -21,8 +21,14 @@ export function DeleteViewForm({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [state, formAction] = useFormState(deleteView, {
+  const [state, formAction] = useFormState<{
+    status: string;
+    id: string;
+    message: string;
+  }>(deleteView, {
     message: "",
+    status: "success",
+    id: viewId, // Initialize with viewId
   });
 
   useEffect(() => {
@@ -35,7 +41,6 @@ export function DeleteViewForm({
     } else if (state.status === "error") {
       toast.error(state.message);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, setIsEditViewFormOpen]);
 
   return (

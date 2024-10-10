@@ -10,20 +10,9 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { number, z } from "zod";
+import { z } from "zod";
 
 //////////////////////// POSTS ////////////////////////
-
-// export const Post = pgTable("post", {
-//   id: uuid("id").notNull().primaryKey().defaultRandom(),
-//   title: varchar("name", { length: 256 }).notNull(),
-//   content: text("content").notNull(),
-//   createdAt: timestamp("created_at").defaultNow().notNull(),
-//   updatedAt: timestamp("updatedAt", {
-//     mode: "date",
-//     withTimezone: true,
-//   }).$onUpdateFn(() => sql`now()`),
-// });
 
 export const postStatusEnum = pgEnum(`status`, [
   "todo",
@@ -82,8 +71,8 @@ export type UpdatePostSchema = z.infer<typeof updatePostSchema>;
 
 export const comments = pgTable("comments", {
   id: uuid("id").notNull().primaryKey().defaultRandom(),
-  postId: uuid("post_id").notNull(),  // Reference to the post
-  authorId: uuid("author_id").notNull(),  // Reference to the user (author)
+  postId: uuid("post_id").notNull(), // Reference to the post
+  authorId: uuid("author_id").notNull(), // Reference to the user (author)
   content: text("content").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -206,6 +195,8 @@ export type EditViewSchema = z.infer<typeof editViewSchema>;
 
 export const deleteViewSchema = z.object({
   id: z.string().uuid(),
+  message: z.string(),
+  status: z.string(),
 });
 
 export type DeleteViewSchema = z.infer<typeof deleteViewSchema>;

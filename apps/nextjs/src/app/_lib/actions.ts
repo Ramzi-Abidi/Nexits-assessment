@@ -5,18 +5,20 @@ import { asc, eq, inArray, not } from "drizzle-orm";
 import { customAlphabet } from "nanoid";
 
 import type {
+  CreatePostSchema,
   CreateTaskSchema,
   CreateViewSchema,
   DeleteViewSchema,
   EditViewSchema,
   Task,
+  UpdatePostSchema,
   UpdateTaskSchema,
 } from "@acme/db/schema";
 import { db, takeFirstOrThrow } from "@acme/db/client";
 import {
   createViewSchema,
-  deleteViewSchema,
   editViewSchema,
+  posts,
   tasks,
   views,
 } from "@acme/db/schema";
@@ -82,6 +84,64 @@ export async function createTask(input: CreateTaskSchema) {
   }
 }
 
+export async function createPost(input: CreatePostSchema) {
+  noStore();
+  try {
+    const status =
+      input.status === "todo" ||
+      input.status === "in-progress" ||
+      input.status === "done" ||
+      input.status === "canceled"
+        ? input.status
+        : "todo";
+
+    await db.transaction(async (tx) => {
+      const newPost = await tx
+        .insert(posts)
+        .values({
+          title: input.title,
+          author: input.author,
+          status: status,
+          nbComments: input.nbComments ?? 0,
+        })
+        .returning({
+          id: posts.id,
+        })
+        .then(takeFirstOrThrow);
+
+      // Optional logic: for example, limiting the number of posts by deleting old ones
+      await tx.delete(posts).where(
+        eq(
+          posts.id,
+          (
+            await tx
+              .select({
+                id: posts.id,
+              })
+              .from(posts)
+              .limit(1)
+              .where(not(eq(posts.id, newPost.id)))
+              .orderBy(asc(posts.createdAt))
+              .then(takeFirstOrThrow)
+          ).id,
+        ),
+      );
+    });
+
+    revalidatePath("/");
+
+    return {
+      data: null,
+      error: null,
+    };
+  } catch (err) {
+    return {
+      data: null,
+      error: getErrorMessage(err),
+    };
+  }
+}
+
 export async function updateTask(input: UpdateTaskSchema & { id: string }) {
   noStore();
   try {
@@ -92,6 +152,31 @@ export async function updateTask(input: UpdateTaskSchema & { id: string }) {
         label: input.label,
         status: input.status,
         priority: input.priority,
+      })
+      .where(eq(tasks.id, input.id));
+
+    revalidatePath("/");
+
+    return {
+      data: null,
+      error: null,
+    };
+  } catch (err) {
+    return {
+      data: null,
+      error: getErrorMessage(err),
+    };
+  }
+}
+
+export async function updatePost(input: UpdatePostSchema & { id: string }) {
+  noStore();
+  try {
+    await db
+      .update(tasks)
+      .set({
+        title: input.title,
+        status: input.status,
       })
       .where(eq(tasks.id, input.id));
 
@@ -140,6 +225,35 @@ export async function updateTasks(input: {
   }
 }
 
+export async function updatePosts(input: {
+  ids: string[];
+  title?: string;
+  status?: "todo" | "in-progress" | "done" | "canceled";
+}) {
+  noStore();
+  try {
+    await db
+      .update(posts)
+      .set({
+        title: input.title,
+        status: input.status,
+      })
+      .where(inArray(posts.id, input.ids));
+
+    revalidatePath("/");
+
+    return {
+      data: null,
+      error: null,
+    };
+  } catch (err) {
+    return {
+      data: null,
+      error: getErrorMessage(err),
+    };
+  }
+}
+
 export async function deleteTask(input: { id: string }) {
   try {
     await db.transaction(async (tx) => {
@@ -165,6 +279,29 @@ export async function deleteTasks(input: { ids: string[] }) {
 
       // Create new tasks for the deleted ones
       await tx.insert(tasks).values(input.ids.map(() => generateRandomTask()));
+    });
+
+    revalidatePath("/");
+
+    return {
+      data: null,
+      error: null,
+    };
+  } catch (err) {
+    return {
+      data: null,
+      error: getErrorMessage(err),
+    };
+  }
+}
+
+export async function deletePosts(input: { ids: string[] }) {
+  try {
+    await db.transaction(async (tx) => {
+      await tx.delete(posts).where(inArray(posts.id, input.ids));
+
+      // Create new posts for the deleted ones
+      // await tx.insert(posts).values(input.ids.map(() => generateRandomPost()));
     });
 
     revalidatePath("/");
@@ -347,18 +484,6 @@ export async function editView(
       message: "View updated",
     };
   } catch (err) {
-    if (
-      typeof err === "object" &&
-      err &&
-      "code" in err &&
-      err.code === "23505"
-    ) {
-      return {
-        status: "error",
-        message: `A view with the name "${validatedFields.data.name}" already exists`,
-      };
-    }
-
     return {
       status: "error",
       message: getErrorMessage(err),
@@ -366,41 +491,26 @@ export async function editView(
   }
 }
 
-type DeleteViewFormState = CreateFormState<DeleteViewSchema>;
-
-export async function deleteView(
-  _prevState: DeleteViewFormState,
-  formData: FormData,
-): Promise<DeleteViewFormState> {
+export async function deleteView(input: DeleteViewSchema) {
   noStore();
 
-  const id = formData.get("id");
-
-  const validatedFields = deleteViewSchema.safeParse({
-    id,
-  });
-
-  if (!validatedFields.success) {
-    const errorMap = validatedFields.error.flatten().fieldErrors;
-    return {
-      status: "error",
-      message: errorMap.id?.[0] ?? "",
-    };
-  }
-
   try {
-    await db.delete(views).where(eq(views.id, validatedFields.data.id));
-
+    await db.delete(views).where(eq(views.id, input.id));
     revalidatePath("/");
-
     return {
+      data: null,
+      error: null,
+      message: "View deleted successfully",
       status: "success",
-      message: "View deleted",
+      id: input.id, // Include the id here
     };
   } catch (err) {
     return {
+      data: null,
+      error: getErrorMessage(err),
+      message: "Error deleting view",
       status: "error",
-      message: getErrorMessage(err),
+      id: input.id, // Include the id here as well
     };
   }
 }
